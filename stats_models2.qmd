@@ -1,0 +1,631 @@
+---
+title: "Statistical Models"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+# Meta Information
+
+This covers similar material to part of basic_stats.qmd, but with a different dataset.  Adds some bonus visualization sections
+
+Prerequisites:
+
+-  R Fundamentals
+
+Core Sections:
+
+- Most of Linear Regression
+
+Recommended Sections:
+
+- Logistic Regression
+- Linear Regression: Assumptions and Residuals
+- Linear Regression: Fitted Values
+- Linear Regression: Predicted Values with Interaction Terms
+
+
+Optional Sections:
+
+- Other Variable Transformations
+- Mixed or Hierarchical Models
+
+
+## Variables in the Environment
+
+```{r}
+library(tidyverse)
+penguins <- read_csv("data/penguins_modified.csv")
+```
+
+Information on the dataset is in summary_stats2.qmd
+
+------------------------------------------------------------------------
+
+::: callout-note
+## This is not a statistical theory workshop
+
+All of the statistical models we're covering have assumptions about the data and other requirements to produce valid output. Here, we're focused on how to run the models in R, not how to ensure we're making correct statistical inferences. Please consult your stats book or a statistician for guidance on actual statistical inference and analysis decisions.
+:::
+
+
+# Linear Regression: Continuous Dependent Variable
+
+Linear regression is used to determine the relationship between one or more independent or explanatory variables and a continuous dependent or outcome variable. 
+
+## Goal
+
+We're going to work with body_mass_g as the dependent variable.  If we just had one predictor, flipper_length_mm, then linear regression would fit a line to the data that minimizes the sum of the squared errors (the squared distance between each point and the fitted line, parallel to the y-axis)
+
+```{r}
+ggplot(penguins, aes(y=body_mass_g, x=flipper_length_mm)) +
+  geom_point() + 
+  geom_smooth(method="lm", se=FALSE)
+```
+
+We want to do more than plot the line - we want to know the slope, intercept, and other measures of the model fit.
+
+## Basic Syntax
+
+To compute the linear regression model, we use the `lm`() function (lm = linear model).  We specify the relationship between the variables with the formula syntax, which at the basic level is `y ~ x`.  The y is the dependent or outcome variable, and it is being modeled as a function of one or more x (independent, predictor, explanatory) variables.
+
+By specifying the data frame to the `data` argument, we don't need to quote the variable names or use `$`.
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm, data=penguins)
+```
+
+The basic output includes the intercept and slope of the fitted line.  
+
+
+## Model Results: Summary
+
+We can get additional information about the model fit with the `summary()` function.  This is the same function that can be used to get summary statistics about a data frame or variable.  The function takes different actions depending on what type of input it is given.
+
+We give the output of `lm()` to `summary()`.  A few options for how to do this:
+
+```{r}
+# pipe
+lm(body_mass_g ~ flipper_length_mm, data=penguins) |> 
+  summary()
+```
+
+```{r, eval=FALSE}
+# nested
+summary(lm(body_mass_g ~ flipper_length_mm, data=penguins))
+
+# save the result in a variable
+reg1 <- lm(body_mass_g ~ flipper_length_mm, data=penguins)
+summary(reg1)
+```
+
+The output of `summary()` includes the standard error on each coefficient estimate, and it computes a t-test for each to determine the likelihood that the coefficient estimate would take the given value if the true value of the coefficient was 0.  We get "stars" summarizing which coefficients are statistically different from 0 at common significance levels. It also include the R-squared measure, which is a measure of how much variance in the dependent variable is explained by the model.  It ranges between 0 and 1.  
+
+The output of `summary()` also let's us know that 2 observations were dropped from the model because they had a missing value for at least one of the variables included in the model.  Observations (rows) must have non-missing values for all variables in the model to be included in the estimation.  
+
+## TRY IT
+
+Run a linear regression model explaining bill_depth_mm with bill_length_mm.  Use `summary()` to see detailed output.
+
+```{r}
+
+```
+
+
+## Result Components
+
+We can retrieve components of the model fit: some from the results of `lm()` directly, and some from `summary()`.
+
+```{r}
+reg1 <- lm(body_mass_g ~ flipper_length_mm, data=penguins)
+reg1_sum <- summary(reg1)
+
+names(reg1)
+names(reg1_sum)
+```
+
+Some components are stored in both (but may not be exactly the same), but some are different.
+
+```{r}
+reg1$coefficients
+reg1_sum$coefficients
+```
+
+
+### Checking Model Fit 
+
+A main measure of model fit is R^2.  When there is just one predictor variable, this is the Pearson correlation between the variables, squared.  
+
+```{r}
+reg1 <- lm(body_mass_g ~ flipper_length_mm, data=penguins)
+reg1_sum <- summary(reg1)
+
+reg1_sum$r.squared
+
+cor(penguins$body_mass_g, penguins$flipper_length_mm, use="pairwise")
+cor(penguins$body_mass_g, penguins$flipper_length_mm, use="pairwise")^2
+```
+
+R^2 tells us what proportion of the variance in the y/outcome variable is explained by the model.  Here, the amount of variance is relatively high: about 3/4 of the variance in body_mass_g is explained by flipper_length_mm.
+
+
+## Fitted Values
+
+The output of the linear regression model is an equation.  
+
+```
+body_mass_g = -5780.8 + 49.69 * flipper_length_mm
+```
+
+This is the equation of the line.  The errors, or the difference between the observed and fitted values, are the residuals.  Both the fitted values and residuals are provided as part of the model results.  First, the fitted values - these are already computed; we don't have to compute the equation ourselves (but we could!).
+
+```{r}
+reg1 <- lm(body_mass_g ~ flipper_length_mm, data=penguins)
+
+reg1$fitted.values
+```
+
+The fitted values are in the same order as the original data, but note that observations that had missing values on any of the included variables are dropped.
+
+```{r}
+plot(reg1$fitted.values ~ penguins$flipper_length_mm[!is.na(penguins$flipper_length_mm)])
+```
+
+If in doubt, the full data used to compute the model is stored along with the model results:
+
+```{r, eval=FALSE}
+reg1$model
+```
+
+
+## TRY IT
+
+Using your linear regression model explaining bill_depth_mm with bill_length_mm (from before, or recompute it), extract the fitted values.
+
+```{r}
+
+```
+
+
+## Assumptions and Residuals
+
+Like many other statistical models, linear regression (in this form) requires the observations to be independent.  There are also specific expectations about the residuals, or errors: the vertical distance between each point and the fitted line (observed y value - predicted y value).  The residuals need to be normally distributed and the variance of the residuals needs to be constant across all values of y (the outcome variable).
+
+```{r}
+reg1 <- lm(body_mass_g ~ flipper_length_mm, data=penguins)
+
+reg1$residuals
+```
+
+The residuals are the length of the black vertical lines
+
+```{r}
+data.frame(x=reg1$model[,2],
+           y=reg1$model[,1],
+           fitted=reg1$fitted.values) %>%
+  ggplot(aes(x=x, xend=x, y=y, yend=fitted)) +
+  geom_segment() +
+  geom_point(color="blue") + 
+  geom_smooth(method="lm", se=FALSE)
+```
+
+Distribution of the residuals: should be normal
+
+```{r}
+hist(reg1$residuals, breaks=20)
+```
+
+Here, the residuals look pretty good.  But there are additional functions to help us assess better than just looking at a histogram of the residuals.
+
+First, if we plot the regression object itself, it will give us a series of plots:
+
+```{r, eval=FALSE}
+plot(reg1)
+```
+
+These show us that the residuals here aren't quite perfect, but they're still pretty good.
+
+The plots show:
+
+* Residuals vs. Fitted: Looking for a linear relationship here
+* Normal Q-Q: If the residuals are normally distributed, they will fall along the shown line
+* Scale-Location: Looking for points to be evenly distributed around the line for the full length
+* Residuals vs. Leverage: Looking for outliers that are significantly affecting the fitted line; points in the upper right or lower right corners of the plot
+
+Reference: https://library.virginia.edu/data/articles/diagnostic-plots
+
+
+## TRY IT
+
+Using a linear regression model explaining bill_depth_mm with bill_length_mm (from before, or recompute it), plot the regression object to check the residuals.
+
+```{r}
+
+```
+
+
+
+## Predicting New Values
+
+Linear regression is often used to explain relationships in data that has already been observed or collected.  But it can also be used for prediction - for predicting outcome values from new observed explanatory or independent variables.  Linear regression is a foundational part of many machine learning models.  
+
+To predict new values, we need a data frame where the variable (column) names match the x variables in the original model.  Then we use the `predict()` function.
+
+If we predict with the original data, we get the fitted values back:
+
+```{r}
+reg1 <- lm(body_mass_g ~ flipper_length_mm, data=penguins)
+
+# head() limits the output to the first few values
+head(predict(reg1, penguins))
+head(reg1$fitted.values)
+```
+
+Predicting with new values:
+
+```{r}
+# make a data frame with columns with x variable names
+newdata <- data.frame(flipper_length_mm = c(175, 200, 225))
+newdata
+
+# predict with the regression result and the new data frame
+predict(reg1, newdata)
+
+predict(reg1, newdata, 
+        se.fit = TRUE,
+        interval = "confidence")  # 95% by default
+
+predict(reg1, newdata, 
+        interval = "prediction")  # 95% by default
+```
+
+There are different types of prediction intervals.  "confidence" only takes into account the uncertainty in the fitted model and is the confidence interval on the mean of the dependent variable at that point (1.96 * SE of the fit); a confidence interval on the fitted line at that point.  The "confidence" interval is what is shown by the error region when ggplot plots a regression line.
+
+```{r}
+penguins %>%
+  ggplot(aes(y=body_mass_g, x=flipper_length_mm)) + 
+  geom_point() + 
+  geom_smooth(method="lm")
+```
+
+"prediction" interval is wider and captures something different: the range of y/outcome values that might be observed associated with these x/predictor values in new data; it is the interval in which a new value should appear for new data, which is much wider than the error on the fitted line (in the same way the observed data is much wider than the uncertainty on the fitted line in the plot above).
+
+Errors and confidence intervals are wider near the ends of the range of the x variables.
+
+While you can predict for any value(s) of x, it's best to keep predictions within the original range of the x variables.
+
+## TRY IT
+
+Using your linear regression model explaining bill_depth_mm with bill_length_mm (from before, or recompute it), what value of bill_depth_mm is expected for a bill_length_mm value of 55?
+
+```{r}
+
+```
+
+
+## Multiple Predictors
+
+To include more than one predictor variable, we add them on the right hand side of the formula:
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm + bill_length_mm, 
+   data=penguins) %>%
+  summary()
+```
+
+
+## Categorical Predictors
+
+Most regression models are more complicated than just two continuous variables.  We can include categorical variables as predictors in the model as well, and R takes care of converting them into the format needed.  We do not have to create binary indicator variables (or perform one-hot encoding) before running the regression.
+
+```{r}
+reg2 <- lm(body_mass_g ~ flipper_length_mm + species, 
+           data=penguins)
+summary(reg2)
+```
+
+By default, R takes the lowest category value (alphabetic by default if the variable isn't already a factor) as the base category: it's what's represented by the Intercept.  It then computes how much the intercept needs to shift relative to this baseline for the other categories.  These are also referred to as fixed effects in the context of mixed or hierarchical models because there is an explicit coefficient estimated for each group.
+
+Remember the intercept is the theoretical value of the y variable (body_mass_g) when the x value (flipper_length_mm) is 0.  This is not observed in the data, and it doesn't make sense in this case.  It's just how the fitted line is defined.  
+
+In this model, the base category is Adelie.  Chinstrap penguins have on average a lower body mass than Adelie penguins (the coefficient for speciesChinstrap is negative), while Gentoo penguins have on average a higher body mass than Adeline penguins (the coefficient on speciesGentoo is positive).
+
+Think about it: how could you change what the base/default category is?
+
+### Removing Default Intercept
+
+An alternative model specification is to compute a separate intercept for each category rather than computing one intercept and then intercept shifts for the other values.  To do this, we remove the default intercept by adding -1 to the model.
+
+```{r}
+reg3 <- lm(body_mass_g ~ -1 + flipper_length_mm + species, data=penguins)
+summary(reg3)
+```
+
+Here, there is no more "Intercept".  Instead, there is a separate intercept for each species.  The model result is three parallel lines (all have the same slope from flipper_length_mm) that intercept the y-axis at different points.
+
+If we remove all other variables (flipper_length_mm), then the computed per-species coefficients are the mean of the y variable (body_mass_g) for each group:
+
+```{r}
+lm(body_mass_g ~ -1 + species, data=penguins) %>%
+  summary()
+penguins %>%
+  group_by(species) %>%
+  summarize(mean(body_mass_g, na.rm=TRUE))
+```
+
+
+## TRY IT
+
+Add species to a linear regression model explaining bill_depth_mm with bill_length_mm. Which species has the highest average bill depth?
+
+```{r}
+
+```
+
+
+## Interaction Terms
+
+What if we think the effect of one x variable on the outcome varies according to another x variable?  For example, what if the relationship between flipper_length_mm and body_mass_g is different for different penguin species?  This is where interaction terms come in.
+
+### Interaction with Continuous Variables
+
+First, let's add in bill measurements into the model
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm + bill_length_mm + bill_depth_mm,
+   data=penguins) |> 
+  summary()
+```
+
+Now, if the effect of bill length might vary by bill depth, or alternatively: if bill length multiplied by bill depth might also matter, we can include an interaction between these variables as well:
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm + bill_length_mm + bill_depth_mm + bill_length_mm:bill_depth_mm,
+   data=penguins) |> 
+  summary()
+```
+
+The `:` indicates an interaction between the two variables.
+
+Another way to specify this is 
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm + bill_length_mm * bill_depth_mm,
+   data=penguins) |> 
+  summary()
+```
+
+`*` is a shorthand for adding each individual term and the interaction between them to the model.
+
+To interpret the full effect of either bill variable on body_mass_g, we would not need to take into account multiple coefficients.  
+
+### Interaction with Categorical Variables
+
+With categorical variables, the syntax is the same, but with categorical variables, we are estimating group-specific effects or group-specific shifts or changes in the effect of another variable.
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm * species, 
+   data=penguins) |> 
+  summary()
+```
+
+Here, instead of having all three species having the same slope (flipper_length_mm coefficient), now we let both the intercept and slope vary by penguin species.  If we really thought all of the penguins were different and we were using a model this simple, it would likely be more appropriate to run three separate regressions here instead of pooling the data.  Normally there would be additional terms as well in this type of model where it did make sense to pool across species.
+
+Here, Adelie is the base category.  That is the intercept represented by the Intercept coefficient, and the coefficient for flipper_length_mm is based on Adelie penguins.  For the other species, the effects are a combination of the baseline Adelie value, plus the intercept and slope shifts for the other species.
+
+For example, the slope of the fitted line for Gentoo penguins is much steeper than for Adelie penguins.  The coefficient for flipper_length_mm:speciesGentoo is ~22, while flipper_length_mm (baseline Adelie) is ~33; the total slope for Gentoo penguins is ~55.  For every increased mm of flipper length for Adelie penguins, body mass increased by 33 g.  But for Gentoo penguins, it increased by 55 g instead.
+
+The data visualization can help us see the combined effects:
+
+```{r}
+penguins %>%
+  ggplot(aes(y=body_mass_g, x=flipper_length_mm, color=species)) +
+  geom_point() + 
+  geom_smooth(method="lm")
+```
+
+Hypothesis testing of coefficients when interaction terms are involved can get a bit tricky and is beyond the scope of this workshop.  This is a good time to talk to your friendly RCDS or BCC statistician!
+
+## TRY IT
+
+Predict bill_depth_mm by bill_length_mm and allow the model to vary by species.
+
+```{r}
+
+```
+
+Challenge: Use diagnostic plots to check the residuals to compare them to a model without species included.  
+
+
+### Predicted Values with Interaction Terms
+
+R automatically takes care of interaction terms when predicting new values
+
+```{r}
+reg5 <- lm(body_mass_g ~ flipper_length_mm * species, 
+   data=penguins)
+predict(reg5, data.frame(flipper_length_mm = seq(180, 220, by=5), species = "Chinstrap"))
+predict(reg5, data.frame(flipper_length_mm = seq(180, 220, by=5), species = "Gentoo"))
+```
+
+
+## Other Variable Transformations
+
+The R formula syntax also provides options for additional variable transformations.  There are some specialized functions, but the `I()` function can be used to wrap many different variable transformations.  This tells R to perform these transformations for us -- we don't have to create new variables in the data frame before running the model (or generating predictions):
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm + I(flipper_length_mm^2), 
+   data=penguins) %>%
+  summary()
+```
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm + I(log(flipper_length_mm)), 
+   data=penguins) %>%
+  summary()
+```
+
+## Comparing Models with ANOVA
+
+When adding additional terms to a linear regression model, the fit (the R^2) can only stay the same or improve.  BUT, is adding the additional terms worth it?  Does a more complicated model explain significantly more of the variance in the y/outcome variable?
+
+ANOVA is used for this question.  Here, use the `anova()` function.
+
+```{r}
+r1 <- lm(body_mass_g ~ flipper_length_mm, 
+   data=penguins)
+r2 <- lm(body_mass_g ~ flipper_length_mm + bill_depth_mm, 
+   data=penguins)
+
+summary(r1)
+summary(r2)
+
+anova(r1, r2)
+```
+
+
+# Mixed or Hierarchical Models
+
+A common way that the assumptions for linear regression is violated is when the observations aren't entirely independent -- when there are groups in the data that may affect the outcome variable.  A classic example is when analyzing the performance of students across multiple schools - the school and the individual teacher are both likely to have an effect on student performance, so we can't ignore those factors.  
+
+In some situations, we can include school and teacher as categorical variables and compute a coefficient for each school/teacher in the model - these are fixed effects.  But when there are a lot of different schools or teachers, we may not care about the specific teacher and school effects directly; we just need to control for them. We can instead specify a model where we allow these group effects to exist and be drawn from a distribution of possible effects.
+
+These types of models can't be specified directly with `lm()`.  A common package for computing these variables is lme4.
+
+```{r, eval=FALSE}
+install.packages(c("lme4", "lmerTest"))
+```
+
+```{r}
+library(lme4)
+library(lmerTest)  # to help with results interpretation
+```
+
+## Random Intercept
+
+In the penguins data, there is a variable called cluster that denotes the group that the penguin was observed in.  We'll hypothesize that these clusters might affect the penguin body weight.  We don't want to estimate an effect for each specific cluster, but we need to control for this potential effect in the model.
+
+So we will specify that the intercept could vary by cluster.  Instead of `lm()`, we use `lmer()`, but it works in a similar way.  
+
+```{r}
+table(penguins$cluster)
+
+mm1 <- lmer(body_mass_g ~ (1 | cluster) + flipper_length_mm,
+     data=penguins) 
+summary(mm1)  # lmerTest output is different than just lmer
+```
+
+Cluster is a random effect -- the coefficient for each specific cluster is modeled as a random draw from a distribution of such effects.  It is reported as part of the random effects output.
+
+The fixed effects report the coefficients similar to `lm()`, but the values are slightly different because of the random intercept.
+
+```{r}
+lm(body_mass_g ~ flipper_length_mm,
+   data=penguins) |>
+  summary()
+```
+
+More on mixed models: https://m-clark.github.io/mixed-models-with-R/random_intercepts.html
+
+
+# Logistic Regression: Binary Dependent Variable
+
+`lm()` is for continuous dependent variables.  A common alternative is to have a binary dependent variable: where we want to explain or predict which observations end up with some characteristic and which do not.  For this, we can use the `glm()` function, which stands for generalized linear model, to run a logistic regression.  The `glm()` function also supports other variations on regression models, such as Poisson regression which is for modeling count data.
+
+## Basic Syntax
+
+The dependent/y variable needs to either be 0/1 values, or be something that can be automatically converted to 0/1 values, such as TRUE and FALSE.  R does not automatically choose a baseline category as it does when using a categorical variable as a predictor (x variable).
+
+```{r}
+table(penguins$sex)
+```
+
+```{r}
+penguins$female <- penguins$sex == "female"
+table(penguins$female)
+```
+
+
+For logistic regression:
+
+```{r}
+glm(female ~ body_mass_g + species,
+    data=penguins,
+    family="binomial") |>
+  summary()
+```
+
+The output is similar, but the interpretation of the coefficients is a bit different.  Instead of predicting the outcome variable directly, we're predicting the log-odds of the outcome - a version of the probability that the outcome will be the "1" category (here female).  
+
+## Fitted Values 
+
+The fitted values are the probability at each point of the outcome being the "1" category:
+
+```{r}
+log1 <- glm(female ~ body_mass_g,
+    data=penguins,
+    family="binomial")
+
+log1$fitted.values
+
+plot(log1$fitted.values ~ log1$model[,2])
+```
+
+As body mass increases, the probability of the pengiun being female decreases.  Note that the line is curved, not linear.
+
+## Predicting New Values
+
+When we predict, the default output is the log odds.  We can request probabilities instead.
+
+```{r}
+log2 <- glm(female ~ body_mass_g * species,
+    data=penguins,
+    family="binomial")
+
+# default
+predict(log2, data.frame(body_mass_g=seq(3000, 6000, by=500), species="Chinstrap"))
+
+# predicted probabilities
+predict(log2, 
+        data.frame(body_mass_g=seq(3000, 6000, by=500), species="Chinstrap"),
+        type="response")
+```
+
+The probability of a Chinstrap penguin being female drops off significantly around a body mass of 4000g 
+
+```{r}
+predprobs <- predict(log2, 
+        data.frame(body_mass_g=seq(3000, 6000, by=50), species="Chinstrap"),
+        type="response")
+plot(predprobs ~ seq(3000, 6000, by=50))
+```
+
+But later for Gentoo
+
+```{r}
+predprobs <- predict(log2, 
+        data.frame(body_mass_g=seq(3000, 6000, by=50), species="Gentoo"),
+        type="response")
+plot(predprobs ~ seq(3000, 6000, by=50))
+```
+
+
+## TRY IT
+
+Run a logistic regression model to predict whether a penguin has_offspring.
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+

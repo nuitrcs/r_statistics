@@ -1,0 +1,269 @@
+---
+title: "Basic Statistics Exercises 2: Answers"
+format:
+  html:
+    embed-resources: true
+editor_options: 
+  chunk_output_type: console
+---
+
+There are many ways to achieve the same thing in R.  This answer key provides one or more solutions aligned with the workshop materials, but there are other ways to successfully complete the exercises.  
+
+
+```{r}
+library(tidyverse)
+pokemon <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-01/pokemon_df.csv')
+```
+
+Unfamiliar with Pokemon?  All you need to know to use this dataset is that each Pokemon is a fictional creature.  They have physical characteristics (height, weight, types, speed, colors, egg types, etc.) and they have skills that they can use to attack other Pokemon, defend themselves, and use other abilities in one-on-one battles.  HP (hit points) are how much damage they can take before they are defeated.  
+
+Find information on the Pokemon variables at: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-01/readme.md
+
+
+## Exercise: Summary Statistics
+
+Explore the hit points (hp) variable.  Visualize the variable and compute summary statistics.
+
+```{r}
+ggplot(pokemon, aes(hp)) +
+  geom_histogram()
+
+summary(pokemon$hp)
+sd(pokemon$hp)
+```
+
+
+## Exercise: Frequency Table
+
+Investigate the type_1 and type_2 variables to see the frequency of each type.  
+
+What is the most common combination?
+
+```{r}
+table(pokemon$type_1, useNA = "ifany")
+table(pokemon$type_2, useNA = "ifany")
+table(pokemon$type_1, pokemon$type_2, useNA = "ifany")
+
+count(pokemon, type_1, type_2) %>% 
+  arrange(desc(n))
+```
+
+
+## Exercise: Confidence Interval on Mean
+
+What is the average attack points for a Pokemon?  Compute a 95% confidence interval on the mean.
+
+```{r}
+mean(pokemon$attack)
+t.test(pokemon$attack)
+
+mean(pokemon$attack) + 1.96*sd(pokemon$attack)/sqrt(length(pokemon$attack))
+mean(pokemon$attack) - 1.96*sd(pokemon$attack)/sqrt(length(pokemon$attack))
+```
+
+
+## Exercise: Groups
+
+What is the average hp for each type (type_1) of Pokemon?  Which type has the highest average?
+
+```{r}
+pokemon %>%
+  group_by(type_1) %>%
+  summarize(avg = mean(hp)) %>%
+  arrange(desc(avg))
+```
+
+
+## Exercise: Correlation
+
+Are attack and defense points correlated?
+
+```{r}
+plot(pokemon$attack, pokemon$defense)
+cor.test(pokemon$attack, pokemon$defense)
+```
+
+
+## Exercise: t-test
+
+Do fairy type (type 1) pokemon have a higher average hp than psychic (type 1) pokemon?
+
+Hint: you'll need to subset the data to compute this.
+
+```{r}
+t.test(pokemon$hp[pokemon$type_1 == "fairy"],
+       pokemon$hp[pokemon$type_1 == "psychic"])
+# no, not statistically different
+```
+
+
+## Exercise: Chi-squared test
+
+The categorical variables in the dataset have a lot of categories.  Start by creating some categorical variables with fewer categories:
+
+```{r}
+# how big are they?
+pokemon$size_cat <- ifelse(pokemon$height > 2.5 | pokemon$weight > 200, "large",
+                           ifelse(pokemon$height > 1 | pokemon$weight > 100, "medium", "small"))
+
+# how many types do they have?  1 or 2?
+pokemon$n_types <- ifelse(is.na(pokemon$type_2), 1, 2)
+```
+
+Now, is there a relationship between size and the number of types a Pokemon has?
+
+```{r}
+table(pokemon$size_cat, pokemon$n_types)
+prop.table(table(pokemon$size_cat, pokemon$n_types), margin=1)
+chisq.test(pokemon$size_cat, pokemon$n_types)
+```
+
+
+## Exercise: t-test
+
+Do Pokemon with 2 types have stronger defenses that those with just 1 type?
+
+Challenge: look up in the help/documentation how to compute a one-sided t-test and use that here instead of a two-sided one.  Choose the correct direction for the one-sided test.
+
+```{r}
+t.test(pokemon$defense ~ pokemon$n_types, alternative="less")
+```
+
+
+## Exercise: Percentiles
+
+What attack score does a Pokemon need to be in the top 5% in terms of attack?
+
+What percentile is Pokemon Machoke in terms of attack strength?
+
+```{r}
+quantile(pokemon$attack, .95)
+
+val <- pokemon$attack[pokemon$pokemon == "machoke"]
+sum(pokemon$attack <= val)/length(pokemon$attack)
+```
+
+
+
+## Exercise: ANOVA
+
+Does Pokemon speed vary by their size category?
+
+```{r}
+# how big are they?
+pokemon$size_cat <- ifelse(pokemon$height > 2.5 | pokemon$weight > 200, "large",
+                           ifelse(pokemon$height > 1 | pokemon$weight > 100, "medium", "small"))
+```
+
+
+```{r}
+pokemon %>%
+  group_by(size_cat) %>%
+  summarize(mean(speed))
+
+aov(pokemon$speed ~ pokemon$size_cat) %>% summary()
+# not a linear relationship - would want to investigate more
+```
+
+
+## Exercise: Correlation Matrix
+
+Compute a correlation matrix for appropriate numeric variables in the dataset.
+
+Challenge: visualize the correlation matrix
+
+```{r}
+cormat <- pokemon %>%
+  select(where(is.numeric)) %>%
+  select(-id, -species_id, -generation_id, -n_types) %>%
+  cor()
+round(cormat, 2)
+
+cormat %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(-var1, names_to="var2") %>%
+  filter(var1 >= var2) %>%  # works because variables are presented in alpha order in this plot
+  ggplot(aes(x=var1, y=var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", 
+                       high = "red", 
+                       mid = "white", 
+                       midpoint = 0, 
+                       limit = c(-1,1), 
+                       space = "Lab", 
+                       name="Correlation") +
+  geom_text(aes(label=round(value, 2))) +  # add values directly
+  coord_fixed() + 
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle=90, hjust=1))
+
+# interesting that everything is pretty much positively correlated;
+# some pokemon are just better overall I guess :)
+```
+
+
+## Exercise: Linear Regression
+
+Use a linear regression model to predict Pokemon hit points (hp).
+
+Challenge: Use diagnostic plots to see if the assumptions about the distribution of residuals are met by your model.
+
+Challenge: Make up stats for a new Pokemon and predict what the hp should be for your new creation.
+
+```{r}
+ggplot(pokemon, aes(attack, defense, color=hp)) +
+  geom_point()
+ggplot(pokemon, aes(hp)) +
+  geom_histogram()
+# will likely have issues with the outliers with very high hp
+```
+
+```{r}
+pokemon %>%
+  filter(hp > 150)
+```
+
+```{r}
+r1 <- lm(hp ~ attack + defense, data=pokemon) 
+summary(r1)
+```
+
+```{r, eval=FALSE}
+plot(r1)
+# There are a few outliers 
+```
+
+```{r}
+# outliers: low and high hp (shuckle, blissey, guzzlord), plus snorlax;
+# row numbers came from diagnostic plots
+pokemon[c(213, 143, 242, 799),]
+```
+
+```{r}
+# try a more complete model
+r2 <- lm(hp ~ attack + defense + special_attack + special_defense + base_experience +
+           height + weight, 
+         data=pokemon) 
+summary(r2)
+```
+
+```{r, eval=FALSE}
+plot(r2)
+# Didn't really deal with the outliers; would need some more work to get an appropriate model
+```
+
+```{r}
+# predict for a pokemon with median on all stats
+predict(r2, data.frame(attack=median(pokemon$attack), 
+                       defense=median(pokemon$defense),
+                       special_attack=median(pokemon$special_attack), 
+                       special_defense=median(pokemon$special_defense),
+                       base_experience=median(pokemon$base_experience),
+                       height=median(pokemon$height), 
+                       weight=median(pokemon$weight)))
+```
+
+
+
+

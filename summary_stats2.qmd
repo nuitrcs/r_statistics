@@ -1,0 +1,737 @@
+---
+title: "Summary Statistics and Statistical Tests"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+# Meta Information
+
+This covers similar material to part of basic_stats.qmd, but with a different dataset.  Adds some additional small sections
+
+Prerequisites:
+
+-  R Fundamentals
+
+Core Sections:
+
+- Statistical Relationships
+
+
+Recommended Sections:
+
+- Continuous Variables
+- Categorical Variables
+- Distributions
+
+
+Optional Sections:
+
+- ANOVA
+- Correlation Matrix
+- Correlation: Tidyverse
+
+
+## Variables in the Environment
+
+None: this is likely the start of a new day/section, so start fresh
+
+------------------------------------------------------------------------
+
+# Setup
+
+We'll use the tidyverse package for some data manipulation and plotting tasks.  Install it first if you don't have it already.  Then load the dataset.   
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+penguins <- read_csv("data/penguins_modified.csv")
+```
+
+This dataset is a modified version of the data in the [palmerpenguins package](https://allisonhorst.github.io/palmerpenguins/).  We've made some additions and changes.
+
+```{r, eval=FALSE}
+View(penguins)
+```
+
+Variables:
+
+* species: categorical: Adelie, Chinstrap, Gentoo
+* island: categorical: Biscoe, Dream, Torgersen
+* sex: categorical: female, male
+* year: categorical: 2007, 2008, 2009
+* bill_length_mm: continuous
+* bill_depth_mm: continuous
+* flipper_length_mm: continuous
+* body_mass_g: continuous
+
+Plus some additional fictional variables that were not in the original data:
+
+* body_mass2_g: continuous: a second measure of body mass
+* has_offspring: boolean/logical: TRUE/FALSE
+* health_status: categorical: good, fair, poor
+* cluster: categorical (stored as numbers): group the penguin was observed in
+
+```{r}
+dim(penguins)
+colSums(is.na(penguins))
+```
+
+
+
+# Continuous Variables: Statistical Summary Measures
+
+R was designed for statistics. Let's review some of the basics.
+
+You should be familiar with functions for some common statistical summary measures for single variables with *continuous* data: `mean()`, `median()`, `sd()`, `var()`, `min()`, `max()`.
+
+## Visualize Your Data
+
+Remember to visualize your data before you start computing summary statistics or performing statistical hypothesis tests.  It will give you a much better understanding and help you see potential issues with the data.
+
+To visualize the distribution of continuous variables, your go-to plot should be a histogram:
+
+```{r}
+# Base R
+hist(penguins$body_mass_g, breaks = 30)
+
+## ggplot2
+ggplot(penguins, aes(body_mass_g)) +
+  geom_histogram(bins=30)
+```
+
+
+## For All Observations
+
+To compute these measures across all observations (rows) in the data:
+
+Option 1: Examples without any external packages
+
+```{r}
+mean(penguins$body_mass_g, na.rm=TRUE)
+median(penguins$body_mass_g, na.rm=TRUE)
+sd(penguins$body_mass_g, na.rm=TRUE)
+var(penguins$body_mass_g, na.rm=TRUE)
+
+# compute multiple measures at once:
+summary(penguins$body_mass_g)
+```
+
+Option 2: Examples using dplyr functions
+
+```{r}
+penguins %>%
+  summarize(mean_mass = mean(body_mass_g, na.rm=TRUE),
+            median_mass = median(body_mass_g, na.rm=TRUE),
+            sd_mass = sd(body_mass_g, na.rm=TRUE),
+            var_mass = var(body_mass_g, na.rm=TRUE))
+```
+
+### Confidence Intervals
+
+To compute the confidence interval on a sample mean, the easiest way in R is (oddly) to use the t-test function:
+
+```{r}
+t.test(penguins$body_mass_g)
+
+# just the CI part
+t.test(penguins$body_mass_g)$conf.int
+```
+
+It computes the mean and a 95% (by default) confidence interval on the mean.  
+
+Otherwise, you can compute it manually:
+
+```{r}
+# make sure to exclude missing observations from the calculation:
+# standard deviation of the sample divided by the square root of the number of observations
+ci <- sd(penguins$body_mass_g, na.rm=TRUE)/sqrt(sum(!is.na(penguins$body_mass_g)))
+upper <- mean(penguins$body_mass_g, na.rm=TRUE) + 1.96*ci
+lower <- mean(penguins$body_mass_g, na.rm=TRUE) - 1.96*ci
+
+c(lower, upper)
+```
+
+
+## TRY IT
+
+Compute the average flipper_length_mm, as well as a confidence interval on the mean.
+
+```{r}
+
+```
+
+
+
+## For Groups
+
+We often want to compute summary statistics separately for different groups in the data.
+
+### Visualize by Group
+
+```{r}
+# Base R
+par(mfrow=c(3,1)) # set the layout
+# set the x range explicitly so that histograms align and are more comparable
+hist(penguins$body_mass_g[penguins$species == "Adelie"], breaks = 30, xlim = c(2500, 7000))
+hist(penguins$body_mass_g[penguins$species == "Chinstrap"], breaks = 30, xlim = c(2500, 7000))
+hist(penguins$body_mass_g[penguins$species == "Gentoo"], breaks = 30, xlim = c(2500, 7000))
+par(mfrow=c(1,1)) # return to default layout of a single plot
+
+## ggplot2 is easier
+ggplot(penguins, aes(body_mass_g)) +
+  geom_histogram(bins=30) +
+  facet_grid(rows=vars(species))
+```
+
+
+### Compute Statistics by Group
+
+To compute these measures per group, the easiest option is to use functions from the dplyr package. There are built-in alternatives (see `tapply()` or `aggregate()`) that you might see as alternatives:
+
+```{r}
+penguins %>%
+  group_by(species) %>%
+  summarize(mean_mass = mean(body_mass_g, na.rm=TRUE),
+            median_mass = median(body_mass_g, na.rm=TRUE),
+            sd_mass = sd(body_mass_g, na.rm=TRUE),
+            var_mass = var(body_mass_g, na.rm=TRUE))
+```
+
+
+## TRY IT
+
+Compute min, max, and mean flipper_length_mm for each species.
+
+```{r}
+
+```
+
+
+
+# Categorical Variables: Frequencies and Proportions
+
+When working with categorical variables, we generally summarize the data with counts of the number of observations in each category or the proportion of observations that fall into each category.
+
+When working with categorical variables, you can create bar charts to visualize the data, but frequency tables give you similar information.
+
+## Single Variable
+
+There are multiple ways to make frequency tables and proportion tables, including some useful packages for creating tables (janitor's tabyl function, gt package, etc.).
+
+Option 1: Examples without any external packages
+
+```{r}
+table(penguins$sex, useNA = "ifany")
+prop.table(table(penguins$sex, useNA = "ifany"))
+```
+
+Option 2: Example using dplyr functions
+
+```{r}
+penguins %>%
+  count(sex) %>%
+  mutate(prop = n / sum(n))
+```
+
+
+## Multiple Variables
+
+We can make frequency tables with multiple variables:
+
+```{r}
+table(penguins$sex, penguins$species, useNA = "ifany")
+```
+
+If we want to then compute proportions, we have to decide which proportions we're computing.  In particular, what is the denominator?  Are we computing row proportions?  Column proportions?  Overall proportions?
+
+With the table above, let's compute proportions across gender categories within each species, meaning we want column proportions (proportions in each column total to 1).  We want to group our analysis by species.
+
+Option 1: Example without any external packages
+
+```{r}
+prop.table(table(penguins$sex, 
+                 penguins$species, 
+                 useNA = "ifany"),
+           margin = 2)  # margin: 1 = rows, 2 = columns
+```
+
+Option 2: Example using dplyr functions
+
+Proportions within each gender total to 1.
+
+```{r}
+count(penguins, sex, species) %>%
+  group_by(species) %>%
+  arrange(species) %>%
+  mutate(prop = n / sum(n))
+```
+
+
+## TRY IT
+
+Examine species and island.  Does each island contain the same mix of penguin species?  
+
+```{r}
+
+```
+
+
+
+# Statistical Relationships
+
+As we explore the relationship between different types of variables, we often want to test whether those relationships are significant: are they real or likely to hold with other data, or are they part of the expected variability and noise in the data?
+
+The type of statistical test we use depends on whether we're working with continuous or categorical variables.
+
+::: callout-note
+## This is not a statistical theory workshop
+
+All of the statistical measures and tests we're covering have assumptions about the data and other requirements to produce valid output. While we will talk about some assumptions, here we're focused on how to run the tests in R, not how to ensure we're making correct statistical inferences. Please consult your stats book or a statistician for guidance on actual statistical inference and analysis decisions.
+:::
+
+## Correlation: Two Continuous
+
+One way to look at the relationship between two continuous variables is the correlation. 
+
+```{r}
+ggplot(penguins, aes(flipper_length_mm, body_mass_g)) +
+  geom_point()
+```
+
+Correlation looks at whether there is a linear relationship.  `cor()` takes two vectors.
+
+```{r}
+cor(penguins$flipper_length_mm, penguins$body_mass_g)
+```
+
+`NA`!
+
+The `NA` options for `cor()` are slightly different than for `mean()` or other similar functions.  The `NA` options are different because `cor()` can also be used with matrices of numeric values.  When computing the correlation between two variables, the option to use is:
+
+```{r}
+cor(penguins$flipper_length_mm, penguins$body_mass_g, use = "pairwise")
+```
+
+To determine whether a correlation is statistically significant, we can use `cor.test()`
+
+```{r}
+cor.test(penguins$flipper_length_mm, penguins$body_mass_g, use = "pairwise")
+```
+
+In addition to computing the correlation coefficient, which ranges between -1 and 1, it also computes a t statistic and runs a hypothesis test (more on these below) where the null hypothesis is that there is no correlation between the variables.  p-values < 0.05 are often considered to be statistically significant, meaning that there is less than a 5% chance of seeing the given correlation statistic if there was truly no relationship between the two variables.
+
+The result is affected by how many observations are included; if you have enough observations, even very small correlations will be statistically significant even if they're aren't substantively significant.
+
+### Tidyverse
+
+You can compute a correlation within a Tidyverse workflow:
+
+```{r}
+penguins %>%
+  summarize(correlation = cor(flipper_length_mm, body_mass_g, use="pairwise"))
+
+penguins %>%
+  group_by(species) %>%
+  summarize(correlation = cor(flipper_length_mm, body_mass_g, use="pairwise"))
+```
+
+You'd need to use the broom package to get the output from `cor.test()` into a tidy format, since it produces multiple pieces of output (not just a single value).
+
+## TRY IT
+
+Compute the correlation between bill_length_mm and bill_depth_mm.  Is this correlation statistically different from 0?
+
+```{r}
+
+```
+
+Now, compute the correlation between these variables again *per species*.
+
+```{r}
+
+```
+
+What do you notice?
+
+### Correlation Matrix
+
+If you want to compute the correlation between multiple continuous variables at the same time, you can create a correlation matrix. You need to ensure that all of the included variables are numeric.
+
+```{r}
+select(penguins, bill_length_mm:body_mass_g)
+# penguins[, 3:6]
+
+select(penguins, bill_length_mm:body_mass_g) %>% 
+  cor(use="pairwise")
+# cor(penguins[, 3:6], use="pairwise")
+```
+
+
+#### Bonus: Visualizing a Correlation Matrix
+
+Examples
+
+```{r}
+select(penguins, bill_length_mm:body_mass_g) %>% 
+  cor(use="pairwise") %>%
+  # cor() returns a matrix: make it a data frame
+  as_tibble(rownames = "var1") %>%
+  # ggplot needs data in a particular format:
+  pivot_longer(-var1, names_to="var2") %>%
+  ggplot(aes(x=var1, y=var2, fill=value)) +
+  geom_tile() +
+  # ensuring an appropriate color scale
+  scale_fill_gradient2(low = "blue", 
+                       high = "red", 
+                       mid = "white", 
+                       midpoint = 0, 
+                       limit = c(-1,1), 
+                       space = "Lab", 
+                       name="Correlation") +
+  coord_fixed() + # make squares
+  theme_minimal() +
+  theme(panel.grid = element_blank())
+```
+
+Just one half, since it's symmetric .
+
+```{r}
+select(penguins, bill_length_mm:body_mass_g) %>% 
+  cor(use="pairwise") %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(-var1, names_to="var2") %>%
+  filter(var1 >= var2) %>%  # works because variables are presented in alpha order in the plot
+  ggplot(aes(x=var1, y=var2, fill=value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", 
+                       high = "red", 
+                       mid = "white", 
+                       midpoint = 0, 
+                       limit = c(-1,1), 
+                       space = "Lab", 
+                       name="Correlation") +
+  geom_text(aes(label=round(value, 2))) +  # add values directly
+  coord_fixed() + 
+  theme_minimal() +
+  theme(panel.grid = element_blank())
+```
+
+
+## t-test: Categorical and Continuous
+
+Is the average body mass of female penguins different than that of male penguins?  This is an example of investigating the relationship between a continuous variable (body mass) and a categorical variable (sex). 
+
+To do this, we can use a t-test to see how the mean differs across two groups.
+
+When using t-tests to compare the means of two samples, the following should be true:
+
+* Observations (rows of the data) are independent of each other 
+* Observations were randomly sampled
+* The values in the two groups should be approximately normally distributed 
+* Both groups should have approximately equal variances
+
+t-test results are fairly robust to stretching the assumptions about normality and equal variances.
+
+```{r}
+penguins %>%
+  group_by(sex) %>%
+  summarize(mean(body_mass_g),
+            sd(body_mass_g),
+            var(body_mass_g))
+
+ggplot(penguins, aes(body_mass_g)) +
+  geom_histogram() + 
+  facet_grid(rows=vars(sex))
+```
+
+The penguin body mass data is bimodal because there are multiple species of penguins included in the dataset.  This is something we'd want to deal with if we were really analyzing this data.  For just learning the R syntax for running t-tests, we're going to ignore this issue for now.
+
+The easiest way to specify that we want to compare the average value of a variable between two groups is to use R's formula syntax, which includes a `~`.  `~` is read as "as a function of".  So to test whether average body mass differs as a function of sex:
+
+```{r}
+t.test(penguins$body_mass_g ~ penguins$sex)
+```
+
+The output includes the mean values for each group, a confidence interval on the *difference* between the two means,  the test statistic, and the p-value.  p-values < 0.05 are often considered to be statistically significant, meaning that there is less than a 5% chance of seeing the given test statistic (t value) if there was truly no difference in means between the two groups.
+
+t-tests will drop observations with a missing value on either variable automatically from the analysis; there is no indication in the t-test results that this has happened.  
+
+If the continuous variable has more than 2 groups, you will need a test or model other than a t-test, such as ANOVA.  
+
+## TRY IT
+
+Does average flipper_length_mm differ by sex?
+
+```{r}
+
+```
+
+
+## t-test: Accessing Results
+
+If you need the values from the t-test results, instead of copying them from the output in the console, you can extract them from the result of the test.  Save the test result to a variable, and then you can access its components:
+
+```{r}
+t1 <- t.test(penguins$body_mass_g ~ penguins$sex)
+
+# t1 is not a data frame, but we can use some of the same functions/syntax to get components
+names(t1)     # names() works for a variety of objects besides data frames
+t1$statistic  # $ is used generally in R to get a named element from a containing object
+t1$p.value
+```
+
+
+## t-test: Other Scenarios
+
+t-tests can also be used in other situations, such as comparing pre and post measures for participants in an experiment or testing whether a single value, such as the mean of a variable, is different from 0 (or another value).
+
+### Single Variable t-test
+
+Instead of comparing the mean of two groups of observations, we can compare whether the mean is different than a specific value.  The specific value of interest is often 0, but we can compare the mean to any value.
+
+We can specify a comparison value with the `mu` argument, which defaults to 0.
+
+```{r}
+t.test(penguins$bill_depth_mm, mu = 17)
+```
+
+
+### Paired t-test
+
+A paired t-test is used when you have more than one measurement per observation.  Instead of comparing averages across two groups, we instead test whether the difference between measurement 1 and measurement 2, averaged across observations (people, penguins, etc.), is different than 0 (or another specified value).
+
+With our dataset, we can ask: is the first body mass measurement different than the second?  
+
+```{r}
+t.test(penguins$body_mass_g, penguins$body_mass2_g, paired = TRUE)
+```
+
+It computes the first variable minus the second variable.  So if the difference is positive, it means that the value of the first variable tends to be higher than the value of the second variable.  Here our penguins mostly lost weight between the first and second measurements.
+
+
+## ANOVA
+
+ANOVA is shorthand for **an**alysis **o**f **va**riance.  It is a family of models that compares the amount of variance between group means to the amount of variance within groups, and provides options for comparing more than the two groups you're limited to with a t-test.  
+
+ANOVA models get used in different ways across different research areas.  They can be used to compare multiple group means (what we're going to do here), as well as to compare how parsimoniously different regression models explain variance (a topic for linear regression models).  In some fields, complex ANOVA models are common; in others, ANOVA models are rarely used.
+
+### Comparing Means across More than 2 Groups
+
+Does body_mass_g vary by penguin species (which has 3 groups)?
+
+```{r}
+penguins %>%
+  group_by(species) %>%
+  summarize(mean(body_mass_g, na.rm=TRUE))
+```
+
+Note: The function is `aov()` NOT `anova()`, which is used for something related but slightly different.
+
+```{r}
+aov(body_mass_g ~ species, data=penguins)
+```
+
+This gives us limited information, but we can use the `summary()` function to get a bit more:
+
+```{r}
+aov(body_mass_g ~ species, data=penguins) %>% 
+  summary()
+# summary(aov(body_mass_g ~ species, data=penguins))
+```
+
+This tells us that body mass does vary by species, but does not tell us anything else about the relationship of body mass values between the three groups.  
+
+### Pairwise Comparisons
+
+There are functions that will compute the pairwise comparisons between groups.  One option is `TukeyHSD()` (Tukey Honest Significant Differences)
+
+```{r}
+aov(body_mass_g ~ species, data=penguins) %>% 
+  TukeyHSD()
+```
+
+See: https://bookdown.org/ndphillips/YaRrr/ex-one-way-anova.html
+
+## TRY IT
+
+Does flipper length vary across species?
+
+```{r}
+
+```
+
+
+### More than one categorical variable
+
+You can perform a two-way ANOVA with multiple variables.  Look at body_mass_g by species and sex:
+
+```{r}
+penguins %>%
+  group_by(species, sex) %>%
+  filter(!is.na(sex)) %>%
+  summarize(mean(body_mass_g, na.rm=TRUE))
+```
+
+We use R's formula syntax and add (with `+`) the additional variable on the right hand side (RHS) of the equation:
+
+```{r}
+aov(body_mass_g ~ species + sex, data=penguins) |> 
+  summary()
+```
+
+The above looks at species and sex as two independent factors.  But what if we think that the difference between the sexes might vary across the species?  We can add an interaction between the two variables by using `*` instead of `+`.  `*` is a shortcut for using both `+` (add variables separately) and `:` (add the combination of two variables).
+
+```{r}
+aov(body_mass_g ~ species * sex, data=penguins) |> 
+  summary()
+```
+
+At this point, it's often a good idea to move to a linear regression model instead of an ANOVA model, but different research fields use different statistical practices.  ANOVA and linear regression are mathematically related.  
+
+### Other Types of ANOVA
+
+Note that above, we really shouldn't have been using the `aov()` function because our data is not balanced across species: there are different number of penguins for each species.  The type of ANOVA that `aov()` calculates assumes balanced groups.  
+
+There are other functions in other packages to address unbalanced data.  See https://bookdown.org/ndphillips/YaRrr/type-i-type-ii-and-type-iii-anovas.html for more information.  But again, as you get into more complicated scenarios, it is often a better idea to use regression models.
+
+## Chi-squared: Two Categorical
+
+To test whether there is a relationship between two categorical variables, we can use a chi-squared test.  If the two variables are completely independent of each other, then the way that observations of one variable are distributed across the groups of the second shouldn't vary.   
+
+* Categories of both variables need to be mutually exclusive
+* Observations need to be independent and randomly sampled
+* With small tables, such as a 2x2, there should be at least 5 observations in each cell of the table
+
+```{r}
+table(penguins$has_offspring, penguins$health_status)
+
+# how TRUE and FALSE observations of has_offspring are distributed across health_status categories
+prop.table(table(penguins$has_offspring, penguins$health_status), 
+           margin = 1)  # 1 = rows
+
+# how different health_status categories are distributed in terms of has_offspring
+prop.table(table(penguins$has_offspring, penguins$health_status), 
+           margin = 2)  # 2 = columns
+```
+
+A chi-squared test doesn't tell us what the relationship is, just whether there is a difference in proportions across categories between different groups.
+
+```{r}
+chisq.test(penguins$has_offspring, penguins$health_status)
+
+# order doesn't matter
+chisq.test(penguins$health_status, penguins$has_offspring)
+```
+
+### Fisher's Exact Test
+
+But what if we do have < 5 observations in a cell in the frequency table?  We use Fisher's exact test instead.  
+
+```{r}
+table(penguins$island, penguins$tested_positive)
+
+chisq.test(penguins$island, penguins$tested_positive)  ## gives a warning
+
+fisher.test(penguins$island, penguins$tested_positive)
+```
+
+
+## TRY IT
+
+Is there any relationship between the species and tested_positive variables?
+
+```{r}
+
+```
+
+
+
+# Distributions
+
+There are other functions in R to support working with either empirical or theoretical distributions.
+
+
+## Quantiles/Percentiles 
+
+We can compute the median value of a distribution, which is the value that half of the data is greater than and half is less than.  But sometimes we want to compute points other than the 50th percentile.  We can get multiple quantile values at the same time with `quantile()`:
+
+```{r}
+quantile(penguins$body_mass_g, 
+         probs = c(.1, .25, .5, .75, .9),
+         na.rm = TRUE)
+```
+
+We can compute the reverse (what percentile is a given value) directly:
+
+```{r}
+sum(penguins$body_mass_g <= 4750, na.rm=TRUE)/sum(!is.na(penguins$body_mass_g))
+```
+
+Or create a function that will do it for all values:
+
+```{r}
+p_mass_ecdf <- ecdf(penguins$body_mass_g)
+# p_mass_ecdf is a function
+
+p_mass_ecdf(4750)
+sort(penguins$body_mass_g) # sort() drops missing values
+p_mass_ecdf(sort(penguins$body_mass_g))  
+```
+
+There are additional settings for all of these functions to control how they handle ties.
+
+## TRY IT
+
+If we wanted to identify the penguins in the top 5% in terms of flipper length, what value should we use as a cut-off?
+
+```{r}
+
+```
+
+
+
+## Distribution Functions
+
+Sometimes we need to work with theoretical statistical distributions instead of empirical ones.  R has functions to get information about many common distributions.  For each distribution, there are 4 functions.  For the normal distribution, for example, there are:
+
+* `pnorm(x)`: what proportion of the distribution is below the value x.  This is used to compute the p-value for a statistic that follows the normal distribution.
+* `qnorm(x)`: the reverse of `pnorm()`: what value of the distribution corresponds to the x quantile or probability.
+* `dnorm(x)`: what is the value of the pdf function for the distribution at the given x value.  This is function is mostly commonly used to visualize the distribution.
+* `rnorm(n)`: return n random values drawn from the distribution 
+
+All of the above functions default to a normal distribution with a mean of 0 and a sd (standard deviation) of 1.  These values can be changed however.
+
+Examples:
+
+```{r}
+# Normal distribution has default parameters of mean = 0, sd = 1
+pnorm(0)    # .5 because 0 is the median of the distribution
+qnorm(.5)   # 0 because half of the distribution is to the left of 0
+qnorm(.975) # 1.96 
+rnorm(3)    # 3 random values
+```
+
+Draw the normal distribution
+
+```{r}
+plot(dnorm(seq(-3, 3, .1)) ~ seq(-3, 3, .1), type="l")
+```
+
+As an example use case, say we have an individual observation that is 1.6 standard deviations above the mean for the variable with a normal distribution.  How extreme is this value?  What proportion of the distribution is to the left of this value?
+
+```{r}
+pnorm(1.6)
+```
+
+Similar functions exist for the uniform (`punif()`, `runif()`, etc.), exponential, binomial, and many other distributions.  Use the command `?Distributions` to pull up the documentation page listing distributions.
+
+
+
+
+
+
+
+
