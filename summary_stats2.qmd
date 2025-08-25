@@ -5,39 +5,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Meta Information
-
-This covers similar material to part of basic_stats.qmd, but with a different dataset.  Adds some additional small sections
-
-Prerequisites:
-
--  R Fundamentals
-
-Core Sections:
-
-- Statistical Relationships
-
-
-Recommended Sections:
-
-- Continuous Variables
-- Categorical Variables
-- Distributions
-
-
-Optional Sections:
-
-- ANOVA
-- Correlation Matrix
-- Correlation: Tidyverse
-
-
-## Variables in the Environment
-
-None: this is likely the start of a new day/section, so start fresh
-
-------------------------------------------------------------------------
-
 # Setup
 
 We'll use the tidyverse package for some data manipulation and plotting tasks.  Install it first if you don't have it already.  Then load the dataset.   

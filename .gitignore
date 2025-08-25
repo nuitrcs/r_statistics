@@ -4,3 +4,7 @@
 .Ruserdata
 
 .DS_Store
+
+*.html
+summary_stats2_files/*
+stats_models2_files/*

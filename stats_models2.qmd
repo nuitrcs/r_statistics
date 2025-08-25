@@ -5,33 +5,9 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Meta Information
+# Setup
 
-This covers similar material to part of basic_stats.qmd, but with a different dataset.  Adds some bonus visualization sections
-
-Prerequisites:
-
--  R Fundamentals
-
-Core Sections:
-
-- Most of Linear Regression
-
-Recommended Sections:
-
-- Logistic Regression
-- Linear Regression: Assumptions and Residuals
-- Linear Regression: Fitted Values
-- Linear Regression: Predicted Values with Interaction Terms
-
-
-Optional Sections:
-
-- Other Variable Transformations
-- Mixed or Hierarchical Models
-
-
-## Variables in the Environment
+If you don't already have the data loaded from the previous part of the workshop:
 
 ```{r}
 library(tidyverse)
@@ -39,8 +15,6 @@ penguins <- read_csv("data/penguins_modified.csv")
 ```
 
 Information on the dataset is in summary_stats2.qmd
-
-------------------------------------------------------------------------
 
 ::: callout-note
 ## This is not a statistical theory workshop
