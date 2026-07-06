@@ -15,4 +15,4 @@ install.packages("tidyverse")
 
 After the workshop, we'd appreciate your feedback.  [Short feedback survey](https://forms.office.com/Pages/ResponsePage.aspx?id=YdN2fXeCCEekd2ToNmzRvLyGHvv_LeNJmg-cYyReiKxUOFFWUFUxRTZUWjdMSTlZVFZHQjI1MVpUMC4u)
 
-<img src="undefined.png" width="25%">
+<img src="QRCode for R_ Statistics Summer 2026 Feedback.png" width="25%">
