@@ -1,6 +1,6 @@
 # R: Statistics
 
-This repo contains materials for the 9/27/25 intermediate R workshop from [Northwestern IT Research Computing and Data Services](https://www.it.northwestern.edu/departments/it-services-support/research/).
+This repo contains materials for the 7/15/26 intermediate R workshop from [Northwestern IT Research Computing and Data Services](https://www.it.northwestern.edu/departments/it-services-support/research/).
 
 How to download these materials: https://sites.northwestern.edu/researchcomputing/resources/downloading-from-github/ 
 
