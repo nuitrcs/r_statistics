@@ -5,13 +5,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-
-## Variables in the Environment
-
-None: this is likely the start of a new day/section, so start fresh
-
-------------------------------------------------------------------------
-
 # Setup
 
 We'll use the tidyverse package for some data manipulation and plotting tasks.  Install it first if you don't have it already.  Then load the dataset.   
