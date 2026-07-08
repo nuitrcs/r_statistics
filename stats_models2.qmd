@@ -31,7 +31,7 @@ Linear regression is used to determine the relationship between one or more inde
 
 ## Goal
 
-We're going to work with body_mass_g as the dependent variable.  If we just had one predictor, flipper_length_mm, then linear regression would fit a line to the data that minimizes the sum of the squared errors (the squared distance between each point and the fitted line, parallel to the y-axis)
+We're going to work with body_mass_g as the dependent variable.  If we just had one predictor, flipper_length_mm, then linear regression would fit a line to the data that minimizes the sum of the squared errors (the squared distance between each point and the fitted line, parallel to the y-axis).
 
 ```{r}
 ggplot(penguins, aes(y=body_mass_g, x=flipper_length_mm)) +
@@ -77,7 +77,7 @@ summary(reg1)
 
 The output of `summary()` includes the standard error on each coefficient estimate, and it computes a t-test for each to determine the likelihood that the coefficient estimate would take the given value if the true value of the coefficient was 0.  We get "stars" summarizing which coefficients are statistically different from 0 at common significance levels. It also include the R-squared measure, which is a measure of how much variance in the dependent variable is explained by the model.  It ranges between 0 and 1.  
 
-The output of `summary()` also let's us know that 2 observations were dropped from the model because they had a missing value for at least one of the variables included in the model.  Observations (rows) must have non-missing values for all variables in the model to be included in the estimation.  
+The output of `summary()` also lets us know that 2 observations were dropped from the model because they had a missing value for at least one of the variables included in the model.  Observations (rows) must have non-missing values for all variables in the model to be included in the estimation.  
 
 ## TRY IT
 
@@ -292,7 +292,7 @@ lm(body_mass_g ~ flipper_length_mm + bill_length_mm,
 
 ## Categorical Predictors
 
-Most regression models are more complicated than just two continuous variables.  We can include categorical variables as predictors in the model as well, and R takes care of converting them into the format needed.  We do not have to create binary indicator variables (or perform one-hot encoding) before running the regression.
+Most regression models are more complicated than just two continuous variables.  We can include categorical character variables as predictors in the model as well, and R takes care of converting them into the format needed.  We do not have to create binary indicator variables (or perform one-hot encoding) before running the regression.
 
 ```{r}
 reg2 <- lm(body_mass_g ~ flipper_length_mm + species, 
@@ -300,7 +300,7 @@ reg2 <- lm(body_mass_g ~ flipper_length_mm + species,
 summary(reg2)
 ```
 
-By default, R takes the lowest category value (alphabetic by default if the variable isn't already a factor) as the base category: it's what's represented by the Intercept.  It then computes how much the intercept needs to shift relative to this baseline for the other categories.  These are also referred to as fixed effects in the context of mixed or hierarchical models because there is an explicit coefficient estimated for each group.
+By default, R takes the lowest category value (alphabetic by default if the variable isn't already a factor) as the base category: it's what's represented by the Intercept.  It then computes how much the intercept needs to shift relative to this baseline for the other categories.  
 
 Remember the intercept is the theoretical value of the y variable (body_mass_g) when the x value (flipper_length_mm) is 0.  This is not observed in the data, and it doesn't make sense in this case.  It's just how the fitted line is defined.  
 
@@ -373,7 +373,7 @@ lm(body_mass_g ~ flipper_length_mm + bill_length_mm * bill_depth_mm,
 
 `*` is a shorthand for adding each individual term and the interaction between them to the model.
 
-To interpret the full effect of either bill variable on body_mass_g, we would not need to take into account multiple coefficients.  
+To interpret the full effect of either bill variable on body_mass_g, we would need to take into account multiple coefficients.  
 
 ### Interaction with Categorical Variables
 
@@ -418,10 +418,10 @@ Challenge: Use diagnostic plots to check the residuals to compare them to a mode
 R automatically takes care of interaction terms when predicting new values
 
 ```{r}
-reg5 <- lm(body_mass_g ~ flipper_length_mm * species, 
+reg4 <- lm(body_mass_g ~ flipper_length_mm * species, 
    data=penguins)
-predict(reg5, data.frame(flipper_length_mm = seq(180, 220, by=5), species = "Chinstrap"))
-predict(reg5, data.frame(flipper_length_mm = seq(180, 220, by=5), species = "Gentoo"))
+predict(reg4, data.frame(flipper_length_mm = seq(180, 220, by=5), species = "Chinstrap"))
+predict(reg4, data.frame(flipper_length_mm = seq(180, 220, by=5), species = "Gentoo"))
 ```
 
 
@@ -592,7 +592,7 @@ pca
 
 The direct output of `prcomp()` shows how each variable contributes to each dimension -- sort of similar to regression coefficients.  
 
-There will be dimensions computed equal to the number of variables in the analysis.  Each dimension is orthogonal (uncorrelated) to the others.  But how many of these are meaningful, i.e. how many dimensions or components explain a substantively significant proportion of the variance among these variables?
+There will be dimensions computed equal to the number of variables in the analysis.  Each dimension is orthogonal (uncorrelated for centered variables) to the others.  But how many of these are meaningful, i.e. how many dimensions or components explain a substantively significant proportion of the variance among these variables?
 
 We want to start with the output of the `summary()` so we can see the proportion of variance explained by each component.  
 
