@@ -5,9 +5,8 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Setup
 
-If you don't already have the data loaded from the previous part of the workshop:
+## Variables in the Environment
 
 ```{r}
 library(tidyverse)
@@ -15,6 +14,8 @@ penguins <- read_csv("data/penguins_modified.csv")
 ```
 
 Information on the dataset is in summary_stats2.qmd
+
+------------------------------------------------------------------------
 
 ::: callout-note
 ## This is not a statistical theory workshop
@@ -171,7 +172,7 @@ reg1 <- lm(body_mass_g ~ flipper_length_mm, data=penguins)
 reg1$residuals
 ```
 
-The residuals are the length of the black vertical lines
+The residuals are the length of the black vertical lines in this plot: 
 
 ```{r}
 data.frame(x=reg1$model[,2],
@@ -458,50 +459,6 @@ anova(r1, r2)
 ```
 
 
-# Mixed or Hierarchical Models
-
-A common way that the assumptions for linear regression is violated is when the observations aren't entirely independent -- when there are groups in the data that may affect the outcome variable.  A classic example is when analyzing the performance of students across multiple schools - the school and the individual teacher are both likely to have an effect on student performance, so we can't ignore those factors.  
-
-In some situations, we can include school and teacher as categorical variables and compute a coefficient for each school/teacher in the model - these are fixed effects.  But when there are a lot of different schools or teachers, we may not care about the specific teacher and school effects directly; we just need to control for them. We can instead specify a model where we allow these group effects to exist and be drawn from a distribution of possible effects.
-
-These types of models can't be specified directly with `lm()`.  A common package for computing these variables is lme4.
-
-```{r, eval=FALSE}
-install.packages(c("lme4", "lmerTest"))
-```
-
-```{r}
-library(lme4)
-library(lmerTest)  # to help with results interpretation
-```
-
-## Random Intercept
-
-In the penguins data, there is a variable called cluster that denotes the group that the penguin was observed in.  We'll hypothesize that these clusters might affect the penguin body weight.  We don't want to estimate an effect for each specific cluster, but we need to control for this potential effect in the model.
-
-So we will specify that the intercept could vary by cluster.  Instead of `lm()`, we use `lmer()`, but it works in a similar way.  
-
-```{r}
-table(penguins$cluster)
-
-mm1 <- lmer(body_mass_g ~ (1 | cluster) + flipper_length_mm,
-     data=penguins) 
-summary(mm1)  # lmerTest output is different than just lmer
-```
-
-Cluster is a random effect -- the coefficient for each specific cluster is modeled as a random draw from a distribution of such effects.  It is reported as part of the random effects output.
-
-The fixed effects report the coefficients similar to `lm()`, but the values are slightly different because of the random intercept.
-
-```{r}
-lm(body_mass_g ~ flipper_length_mm,
-   data=penguins) |>
-  summary()
-```
-
-More on mixed models: https://m-clark.github.io/mixed-models-with-R/random_intercepts.html
-
-
 # Logistic Regression: Binary Dependent Variable
 
 `lm()` is for continuous dependent variables.  A common alternative is to have a binary dependent variable: where we want to explain or predict which observations end up with some characteristic and which do not.  For this, we can use the `glm()` function, which stands for generalized linear model, to run a logistic regression.  The `glm()` function also supports other variations on regression models, such as Poisson regression which is for modeling count data.
@@ -542,10 +499,10 @@ log1 <- glm(female ~ body_mass_g,
 
 log1$fitted.values
 
-plot(log1$fitted.values ~ log1$model[,2])
+plot(log1$fitted.values ~ log1$model[,2]) # log1$model[,2] is the x values: body_mass_g
 ```
 
-As body mass increases, the probability of the pengiun being female decreases.  Note that the line is curved, not linear.
+As body mass increases, the probability of the penguin being female decreases.  Note that the line is curved, not linear.
 
 ## Predicting New Values
 
@@ -593,6 +550,92 @@ Run a logistic regression model to predict whether a penguin has_offspring.
 ```
 
 
+
+# Principal Component Analysis (PCA)
+
+Working with many different variables can be challenging.  Sometimes, we want to see if our data with multiple dimensions (or variables) can be well summarized or represented by a smaller number of dimensions.  For example, looking at penguins of the same species, we have multiple size measurements of each penguin.  Do we need to use all of these separate measures in our analysis, or could they all be summarized well by a common "size" dimension that explains a large proportion of the variance in the individual variables?
+
+PCA is one technique for dimension reduction of a numerical dataset.  
+
+## Check Variables
+
+For PCA to work well, we want to start with variables with at least reasonable correlation with each other:
+
+```{r}
+penguins %>%
+  # limit to 1 species because we know there's variance
+  filter(species == "Adelie") %>% 
+  # select just related numeric variables
+  select(body_mass_g, bill_depth_mm, bill_length_mm, flipper_length_mm) %>%
+  cor(use="pairwise")
+```
+
+
+## Basic Syntax
+
+```{r}
+pca <- penguins %>%
+  # limit to 1 species because we know there's variance
+  filter(species == "Adelie") %>% 
+  # select just related numeric variables
+  select(body_mass_g, bill_depth_mm, bill_length_mm, flipper_length_mm) %>%
+  # remove missing values
+  filter(complete.cases(.)) %>%
+  # compute PCA
+  prcomp(center = TRUE, scale. = TRUE)
+
+pca
+```
+
+`center` and `scale.` are important so the variables receive equal weight in the analysis.  
+
+The direct output of `prcomp()` shows how each variable contributes to each dimension -- sort of similar to regression coefficients.  
+
+There will be dimensions computed equal to the number of variables in the analysis.  Each dimension is orthogonal (uncorrelated) to the others.  But how many of these are meaningful, i.e. how many dimensions or components explain a substantively significant proportion of the variance among these variables?
+
+We want to start with the output of the `summary()` so we can see the proportion of variance explained by each component.  
+
+```{r}
+summary(pca)
+```
+
+Here, a single dimension captures over half of the variance in these 4 variables, which is good but not great.  It captures a lot, but there is still a notable amount of additional variance not explained by the first dimension.  
+
+## Number of Dimensions
+
+Depending on why were are trying to reduce the dimensions in our data, we may need to decide how many dimensions we should include as a good summary of the data.  
+
+When we have a lot of features, such as when working with sensor data or sometimes when building machine learning models, we might set a threshold of how much variance we want selected components to capture.  For example, we may select the number of components that together capture 95% of the variance.  
+
+When we're working with a smaller number of variables, we might keep choosing components until the amount of variance explained starts to drop off.  People sometimes look at a scree plot:
+
+```{r}
+screeplot(pca, type="lines")
+```
+
+Sometimes people look for the bend or elbow in the plot, and only choose components up to the elbow.  Here, that would be the first two components.  
+
+
+## Extracting Components
+
+Once you choose the number of components, you need to extract them to use as variables in subsequent analysis.
+
+```{r}
+comps <- as.data.frame(pca$x[,1:2])
+
+adelie_pca <- penguins %>%
+  # select the observations we used for the PCA
+  filter(species == "Adelie") %>%
+  select(body_mass_g, bill_depth_mm, bill_length_mm, flipper_length_mm) %>%
+  filter(complete.cases(.)) %>%
+  # add in the PCA components we extracted
+  bind_cols(comps)
+
+adelie_pca
+
+plot(adelie_pca$PC1 ~ adelie_pca$PC2)
+cor(adelie_pca$PC1, adelie_pca$PC2) # uncorrelated
+```
 
 
 

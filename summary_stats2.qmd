@@ -5,6 +5,13 @@ editor_options:
   chunk_output_type: console
 ---
 
+
+## Variables in the Environment
+
+None: this is likely the start of a new day/section, so start fresh
+
+------------------------------------------------------------------------
+
 # Setup
 
 We'll use the tidyverse package for some data manipulation and plotting tasks.  Install it first if you don't have it already.  Then load the dataset.   
@@ -39,7 +46,6 @@ Plus some additional fictional variables that were not in the original data:
 * body_mass2_g: continuous: a second measure of body mass
 * has_offspring: boolean/logical: TRUE/FALSE
 * health_status: categorical: good, fair, poor
-* cluster: categorical (stored as numbers): group the penguin was observed in
 
 ```{r}
 dim(penguins)
@@ -86,6 +92,8 @@ var(penguins$body_mass_g, na.rm=TRUE)
 summary(penguins$body_mass_g)
 ```
 
+Note that the values in the `summary()` output are rounded.
+
 Option 2: Examples using dplyr functions
 
 ```{r}
@@ -95,6 +103,8 @@ penguins %>%
             sd_mass = sd(body_mass_g, na.rm=TRUE),
             var_mass = var(body_mass_g, na.rm=TRUE))
 ```
+
+The `.` after some of the numbers indicates that the values are rounded.
 
 ### Confidence Intervals
 
@@ -227,7 +237,7 @@ prop.table(table(penguins$sex,
 
 Option 2: Example using dplyr functions
 
-Proportions within each gender total to 1.
+Proportions within each species total to 1.
 
 ```{r}
 count(penguins, sex, species) %>%
@@ -363,7 +373,7 @@ select(penguins, bill_length_mm:body_mass_g) %>%
   theme(panel.grid = element_blank())
 ```
 
-Just one half, since it's symmetric .
+Just one half, since it's symmetric.
 
 ```{r}
 select(penguins, bill_length_mm:body_mass_g) %>% 
@@ -386,6 +396,7 @@ select(penguins, bill_length_mm:body_mass_g) %>%
   theme(panel.grid = element_blank())
 ```
 
+Or look at packages (ggcorrplot is one example) designed to create these types of plots.
 
 ## t-test: Categorical and Continuous
 
@@ -405,11 +416,13 @@ t-test results are fairly robust to stretching the assumptions about normality a
 ```{r}
 penguins %>%
   group_by(sex) %>%
-  summarize(mean(body_mass_g),
-            sd(body_mass_g),
-            var(body_mass_g))
+  summarize(mean(body_mass_g, na.rm=TRUE),
+            sd(body_mass_g, na.rm=TRUE),
+            var(body_mass_g, na.rm=TRUE))
 
-ggplot(penguins, aes(body_mass_g)) +
+penguins %>%
+  filter(!is.na(sex)) %>%
+  ggplot(aes(body_mass_g)) +
   geom_histogram() + 
   facet_grid(rows=vars(sex))
 ```
@@ -422,7 +435,7 @@ The easiest way to specify that we want to compare the average value of a variab
 t.test(penguins$body_mass_g ~ penguins$sex)
 ```
 
-The output includes the mean values for each group, a confidence interval on the *difference* between the two means,  the test statistic, and the p-value.  p-values < 0.05 are often considered to be statistically significant, meaning that there is less than a 5% chance of seeing the given test statistic (t value) if there was truly no difference in means between the two groups.
+The output includes the mean values for each group, a confidence interval on the *difference* between the two means, the test statistic, and the p-value.  p-values < 0.05 are often considered to be statistically significant, meaning that there is less than a 5% chance of seeing the given test statistic (t value) if there was truly no difference in means between the two groups.
 
 t-tests will drop observations with a missing value on either variable automatically from the analysis; there is no indication in the t-test results that this has happened.  
 
@@ -473,6 +486,9 @@ A paired t-test is used when you have more than one measurement per observation.
 With our dataset, we can ask: is the first body mass measurement different than the second?  
 
 ```{r}
+mean(penguins$body_mass_g, na.rm=TRUE)
+mean(penguins$body_mass2_g, na.rm=TRUE)
+
 t.test(penguins$body_mass_g, penguins$body_mass2_g, paired = TRUE)
 ```
 
