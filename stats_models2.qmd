@@ -179,9 +179,9 @@ The residuals are the length of the black vertical lines in this plot:
 data.frame(x=reg1$model[,2],
            y=reg1$model[,1],
            fitted=reg1$fitted.values) %>%
-  ggplot(aes(x=x, xend=x, y=y, yend=fitted)) +
-  geom_segment() +
-  geom_point(color="blue") + 
+ggplot(aes(x=x, y=y)) +
+  geom_segment(aes(xend = x, yend = fitted)) +
+  geom_point(color="blue") +
   geom_smooth(method="lm", se=FALSE)
 ```
 
